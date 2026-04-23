@@ -254,7 +254,7 @@ function fireAtNearest() {
   mesh.position.set(hero.pos.x, 0.62, hero.pos.z);
   actorRoot.add(mesh);
   shots.push({ mesh, dir: { x: dx / len, y: dz / len }, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
-  heroAttackTime = 0.28;
+  heroAttackTime = 0.34;
 }
 
 function burstWard() {
@@ -372,7 +372,7 @@ function update(dt: number) {
   heroRig.setPosition(hero.pos);
   heroRig.update(dt, {
     moving: heroMoving,
-    attack: heroAttackTime > 0 ? 1 - heroAttackTime / 0.28 : 0,
+    attack: heroAttackTime > 0 ? 1 - heroAttackTime / 0.34 : 0,
     hitFlash: hero.invuln,
     facingX: input.x,
     facingZ: input.y,

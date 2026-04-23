@@ -52,9 +52,9 @@ heroStateSheet.magFilter = THREE.LinearFilter;
 heroStateSheet.generateMipmaps = true;
 
 const heroClips: Record<AnimationState, ClipSpec> = {
-  idle: { frames: [0, 1, 2, 1], fps: 2.4, loop: true },
-  walk: { frames: [4, 5, 6, 7], fps: 9.5, loop: true },
-  attack: { frames: [8, 9, 10], fps: 14, loop: false },
+  idle: { frames: [0, 1, 2, 1], fps: 2.05, loop: true },
+  walk: { frames: [4, 5, 6, 7], fps: 10.8, loop: true },
+  attack: { frames: [8, 8, 9, 9, 10], fps: 18, loop: false },
   hit: { frames: [11], fps: 8, loop: false },
 };
 
@@ -282,8 +282,8 @@ export class CharacterRig {
     this.group.add(body);
 
     if (this.heroFrames) {
-      body.scale.set(2.05, 2.05, 1);
-      body.position.y = 0.98;
+      body.scale.set(2, 2, 1);
+      body.position.y = 0.96;
       const shadow = new THREE.Sprite(makeMaterial(makeShadowTexture(), 0.86));
       shadow.scale.set(1.15, 0.24, 1);
       shadow.position.y = 0.05;
@@ -428,20 +428,28 @@ export class CharacterRig {
       this.lastFrame = frame;
     }
 
-    const rate = this.state === 'walk' ? 10 : 2.4;
+    const rate = this.state === 'walk' ? 10.8 : this.state === 'attack' ? 5.2 : 2.05;
     this.walkClock += dt * rate;
     const step = Math.sin(this.walkClock);
-    const attackLean = this.state === 'attack' ? Math.sin(Math.min(1, this.stateTime * 5.8) * Math.PI) : 0;
+    const attackT = this.state === 'attack' ? THREE.MathUtils.clamp(this.stateTime / 0.34, 0, 1) : 0;
+    const anticipation = attackT > 0 && attackT < 0.34 ? 1 - attackT / 0.34 : 0;
+    const strike = attackT >= 0.34 && attackT < 0.66 ? (attackT - 0.34) / 0.32 : 0;
+    const recovery = attackT >= 0.66 ? (attackT - 0.66) / 0.34 : 0;
+    const attackLean = this.state === 'attack'
+      ? anticipation * -0.55 + easeOutBack(strike) * 0.9 + (1 - easeOut(recovery)) * 0.22
+      : 0;
     const hurtLean = this.state === 'hit' ? Math.sin(this.stateTime * 36) * 0.08 : 0;
     const bob = this.state === 'walk'
       ? Math.abs(step) * 0.065
-      : Math.sin(this.walkClock * 0.7) * 0.016;
-    const squash = this.state === 'walk' ? Math.abs(step) * 0.025 : 0;
+      : this.state === 'idle'
+        ? Math.sin(this.walkClock * 0.7) * 0.018
+        : -anticipation * 0.035 + strike * 0.045;
+    const squash = this.state === 'walk' ? Math.abs(step) * 0.025 : strike * 0.018;
 
-    this.group.scale.set(0.86 * side * (1 + squash * 0.2), 0.86 * (1 - squash), 0.86);
-    this.body.position.x = attackLean * 0.06 - hurtLean * 0.5;
-    this.body.position.y = 0.98 + bob;
-    this.body.rotation.z = attackLean * -0.06 + hurtLean;
+    this.group.scale.set(0.86 * side * (1 + squash * 0.24), 0.86 * (1 - squash), 0.86);
+    this.body.position.x = attackLean * 0.08 - hurtLean * 0.5;
+    this.body.position.y = 0.96 + bob;
+    this.body.rotation.z = attackLean * -0.055 + hurtLean;
     this.body.material.color.setHex(pose.hitFlash > 0 ? 0xfff1de : 0xffffff);
 
     if (this.shadow) {
