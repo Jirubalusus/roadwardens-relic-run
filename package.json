@@ -1,0 +1,22 @@
+{
+  "name": "roadwardens-relic-run",
+  "version": "1.0.0",
+  "description": "Mobile-first Three.js isometric action survivor about a magical roadwardens' journey.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
+  }
+}
