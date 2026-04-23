@@ -1,0 +1,68 @@
+[
+  {
+    "id": "hero-mira-idle",
+    "output": "public/assets/sprites/hero-mira-idle.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game character sprite. Primary request: original fantasy roadwarden heroine named Mira, compact readable in-game sprite, blue travel cloak, brass road lantern, short ashwood sling staff, determined expression, warm gold identity accents. Style/medium: stylized 3D-to-2D painterly game sprite with crisp silhouette and clean value grouping. Composition/framing: isometric three-quarter view, full body, centered, generous padding, no crop. Lighting/mood: warm lantern rim light against cool twilight shadows. Constraints: readable at 64px, chunky silhouette, no text, no logo, no copyrighted franchise resemblance."
+  },
+  {
+    "id": "enemy-thorn-skulk",
+    "output": "public/assets/sprites/enemy-thorn-skulk.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game enemy sprite. Primary request: original twilight road-haunt thorn skulk enemy, low triangular body, thorny shoulders, glowing small eyes. Style/medium: stylized isometric 3D-to-2D mobile game sprite, crisp outline, painterly surface. Composition/framing: full body, centered, readable at 48px, strong triangular silhouette. Lighting/mood: warm rim light, cool shadow body. Constraints: no gore, no text, no logo, avoid thin details."
+  },
+  {
+    "id": "enemy-stone-brute",
+    "output": "public/assets/sprites/enemy-stone-brute.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game enemy sprite. Primary request: original oathless stone brute, square heavy road-haunt made from cracked watch stones and milestone fragments. Style/medium: stylized isometric 3D-to-2D mobile game sprite, chunky readable planes, crisp outline. Composition/framing: full body, centered, readable at 56px, strong square silhouette. Lighting/mood: pale moon edge light and faint gold rune glow. Constraints: no text, no logo, no thin chips that disappear on mobile."
+  },
+  {
+    "id": "enemy-marsh-wisp",
+    "output": "public/assets/sprites/enemy-marsh-wisp.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game enemy sprite. Primary request: original marsh candle wisp, floating teal flame spirit with two bright readable eye shapes. Style/medium: stylized isometric 3D-to-2D mobile game sprite, crisp outer contour despite glow. Composition/framing: centered, readable at 44px, teardrop silhouette. Lighting/mood: teal flame core with warm lantern rim. Constraints: no smoke wisps thinner than 8 percent of sprite width, no text, no logo."
+  },
+  {
+    "id": "pickup-relic-shard",
+    "output": "public/assets/sprites/pickup-relic-shard.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game pickup icon. Primary request: teal relic shard XP pickup, original fantasy road journey collectible. Style/medium: isometric icon, crisp outline, simple gemstone planes, warm lantern highlight. Composition/framing: centered object with generous padding, readable at 32px. Constraints: no text, no logo, avoid jewelry complexity."
+  },
+  {
+    "id": "pickup-waybread-heart",
+    "output": "public/assets/sprites/pickup-waybread-heart.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent mobile game pickup icon. Primary request: red waybread heart health pickup, half bread charm half heart shape, readable instantly as healing. Style/medium: isometric icon, crisp outline, warm fantasy-road palette. Composition/framing: centered, readable at 32px. Constraints: no text, no logo, simple silhouette."
+  },
+  {
+    "id": "prop-waystone",
+    "output": "public/assets/sprites/prop-waystone.png",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: transparent environment prop sprite. Primary request: mossy fantasy road waystone with one simple glowing route mark, original design. Style/medium: stylized isometric mobile game prop, chunky silhouette, low visual noise. Composition/framing: centered, full prop, readable at 48px. Constraints: no readable letters, no text, no logo."
+  },
+  {
+    "id": "backdrop-whisperbough-verge",
+    "output": "public/assets/sprites/backdrop-whisperbough-verge.webp",
+    "size": "2048x2048",
+    "quality": "medium",
+    "background": "opaque",
+    "output_format": "webp",
+    "output_compression": 82,
+    "prompt": "Use case: stylized-concept. Asset type: square mobile game combat backdrop. Primary request: Whisperbough Verge, original magical road journey battlefield, twilight enchanted forest edge with emerald moss and old road stones. Style/medium: stylized isometric game backdrop, painterly but low-noise. Composition/framing: clear empty combat space in center, detail pushed to outer third, seamless-feeling ground plane. Lighting/mood: cool twilight shadows with small warm lantern accents. Constraints: no characters, no text, no logo, no dark unreadable center."
+  }
+]

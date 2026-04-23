@@ -50,4 +50,10 @@ or enable Pages in GitHub repository settings with GitHub Actions as the source.
 
 ## Placeholder Art Pipeline
 
-The current build uses lightweight procedural geometry and materials for performance. See `ASSET_PROMPTS.md` for production-ready prompts and specs for later ChatGPT image generation asset passes.
+The current build uses lightweight runtime canvas sprites and textured ground materials for performance and mobile readability. See `assets/gpt-image-2/` for the ready-to-run GPT Image asset pipeline and `ASSET_PROMPTS.md` for broader art direction notes.
+
+```bash
+npm run assets:gpt-image
+```
+
+Set `OPENAI_API_KEY` first. The pipeline writes generated sprites to `public/assets/sprites/`.

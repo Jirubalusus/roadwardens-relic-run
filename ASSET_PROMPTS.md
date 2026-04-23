@@ -1,6 +1,6 @@
 # Roadwardens: Relic Run Asset Prompts
 
-Use these prompts with ChatGPT image generation ("chat image 2.0") to create a consistent production placeholder art pass. Export transparent PNG sprites at 1024px source size unless noted, then downscale and atlas for runtime.
+Use these prompts with ChatGPT image generation or the checked-in GPT Image pipeline to create a consistent production placeholder art pass. The runnable batch spec is in `assets/gpt-image-2/prompts.json`; run it with `npm run assets:gpt-image` after setting `OPENAI_API_KEY`. Export transparent PNG sprites at 1024px source size unless noted, then downscale and atlas for runtime.
 
 ## Art Direction
 

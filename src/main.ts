@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createRuntimeArt } from './art';
 import './styles.css';
 
 type Vec2 = { x: number; y: number };
@@ -75,6 +76,7 @@ const burstButton = document.querySelector<HTMLButtonElement>('#burst')!;
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = false;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -93,11 +95,19 @@ const propRoot = new THREE.Group();
 const actorRoot = new THREE.Group();
 scene.add(root, propRoot, actorRoot);
 
+const art = createRuntimeArt();
 const groundGeo = new THREE.PlaneGeometry(90, 90, 1, 1);
-const groundMat = new THREE.MeshStandardMaterial({ color: stages[0].ground, roughness: 1 });
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: art.ground[0], roughness: 1 });
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
 root.add(ground);
+
+function makeSprite(map: THREE.Texture, width: number, height: number, y = height * 0.5) {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, alphaTest: 0.05 }));
+  sprite.scale.set(width, height, 1);
+  sprite.position.y = y;
+  return sprite;
+}
 
 const ringGeo = new THREE.TorusGeometry(1, 0.04, 8, 32);
 const ringMat = new THREE.MeshBasicMaterial({ color: 0xf1c566, transparent: true, opacity: 0.9 });
@@ -124,26 +134,19 @@ const hero = {
 };
 
 const heroMesh = new THREE.Group();
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.72, 4, 8), new THREE.MeshStandardMaterial({ color: 0xf1c566, roughness: 0.62 }));
-body.position.y = 0.82;
-const cloak = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.8, 5), new THREE.MeshStandardMaterial({ color: 0x4169a8, roughness: 0.8 }));
-cloak.position.set(0, 0.55, -0.16);
-heroMesh.add(body, cloak);
+const heroSprite = makeSprite(art.sprites.hero, 1.45, 1.65, 0.86);
+heroMesh.add(heroSprite);
 actorRoot.add(heroMesh);
 
-const enemyGeo = new THREE.ConeGeometry(0.45, 0.95, 6);
-const bruteGeo = new THREE.BoxGeometry(0.9, 1.05, 0.9);
-const shotGeo = new THREE.SphereGeometry(0.14, 8, 8);
-const xpGeo = new THREE.OctahedronGeometry(0.18);
 const props: THREE.Object3D[] = [];
 
-type Enemy = { mesh: THREE.Mesh; hp: number; maxHp: number; speed: number; touch: number; kind: 'skulk' | 'brute' | 'wisp'; hitFlash: number };
-type Shot = { mesh: THREE.Mesh; dir: Vec2; life: number; damage: number; pierce: number };
-type Gem = { mesh: THREE.Mesh; value: number; pull: boolean };
+type Enemy = { mesh: THREE.Sprite; hp: number; maxHp: number; speed: number; touch: number; kind: 'skulk' | 'brute' | 'wisp'; hitFlash: number };
+type Shot = { mesh: THREE.Sprite; dir: Vec2; life: number; damage: number; pierce: number };
+type Gem = { mesh: THREE.Sprite; value: number; pull: boolean };
 const enemies: Enemy[] = [];
 const shots: Shot[] = [];
 const gems: Gem[] = [];
-const particles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
+const particles: { mesh: THREE.Mesh | THREE.Sprite; vel: THREE.Vector3; life: number }[] = [];
 
 let stageIndex = 0;
 let stageTime = 0;
@@ -173,7 +176,8 @@ function setStage(index: number) {
   const stage = stages[stageIndex];
   stageTime = 0;
   spawnTimer = 0.6;
-  groundMat.color.setHex(stage.ground);
+  groundMat.map = art.ground[index];
+  groundMat.needsUpdate = true;
   scene.fog = new THREE.Fog(stage.fog, 18, 46);
   renderer.setClearColor(stage.fog);
   stageName.textContent = stage.name;
@@ -184,15 +188,19 @@ function setStage(index: number) {
 function buildProps(stage: Stage) {
   props.forEach((p) => propRoot.remove(p));
   props.length = 0;
-  const mat = new THREE.MeshStandardMaterial({ color: stage.accent, roughness: 0.9 });
-  for (let i = 0; i < 42; i++) {
-    const isStone = i % 3 === 0;
-    const geo = isStone ? new THREE.DodecahedronGeometry(0.35 + Math.random() * 0.35) : new THREE.CylinderGeometry(0.08, 0.18, 0.9 + Math.random() * 0.9, 5);
-    const mesh = new THREE.Mesh(geo, mat);
+  for (let i = 0; i < 46; i++) {
+    const propMap =
+      stageIndex === 2 && i % 4 === 0 ? art.sprites.lanternReed :
+      stageIndex === 3 && i % 3 === 0 ? art.sprites.cairn :
+      i % 4 === 0 ? art.sprites.waystone :
+      art.sprites.tree;
+    const tall = propMap === art.sprites.tree || propMap === art.sprites.lanternReed;
+    const mesh = makeSprite(propMap, tall ? 1.35 : 0.95, tall ? 1.55 : 1.05, tall ? 0.78 : 0.54);
+    (mesh.material as THREE.SpriteMaterial).color.setHex(stageIndex === 0 ? 0xffffff : stageIndex === 1 ? 0xd9ddf0 : stageIndex === 2 ? 0xd9fff2 : 0xffddc2);
     const angle = Math.random() * Math.PI * 2;
     const dist = 8 + Math.random() * 34;
-    mesh.position.set(Math.cos(angle) * dist, isStone ? 0.18 : 0.45, Math.sin(angle) * dist);
-    mesh.rotation.y = Math.random() * Math.PI;
+    mesh.position.set(Math.cos(angle) * dist, mesh.position.y, Math.sin(angle) * dist);
+    mesh.scale.multiplyScalar(0.8 + Math.random() * 0.55);
     propRoot.add(mesh);
     props.push(mesh);
   }
@@ -219,8 +227,9 @@ function spawnEnemy() {
   const kind: Enemy['kind'] = roll > 0.84 && stageIndex > 0 ? 'brute' : roll > 0.63 && stageIndex > 1 ? 'wisp' : 'skulk';
   const angle = Math.random() * Math.PI * 2;
   const dist = 12 + Math.random() * 3;
-  const mesh = new THREE.Mesh(kind === 'brute' ? bruteGeo : enemyGeo, new THREE.MeshStandardMaterial({ color: stage.enemyTint, roughness: 0.7 }));
-  mesh.position.set(hero.pos.x + Math.cos(angle) * dist, 0.5, hero.pos.z + Math.sin(angle) * dist);
+  const mesh = makeSprite(kind === 'brute' ? art.sprites.brute : kind === 'wisp' ? art.sprites.wisp : art.sprites.skulk, kind === 'brute' ? 1.45 : 1.15, kind === 'brute' ? 1.45 : 1.2, kind === 'brute' ? 0.75 : 0.64);
+  (mesh.material as THREE.SpriteMaterial).color.setHex(stage.enemyTint);
+  mesh.position.set(hero.pos.x + Math.cos(angle) * dist, mesh.position.y, hero.pos.z + Math.sin(angle) * dist);
   actorRoot.add(mesh);
   const hp = (kind === 'brute' ? 10 : kind === 'wisp' ? 5 : 3) * (1 + stageIndex * 0.45);
   enemies.push({ mesh, hp, maxHp: hp, speed: (kind === 'brute' ? 2.3 : kind === 'wisp' ? 4.1 : 3.1) * stage.speed, touch: kind === 'brute' ? 18 : 10, kind, hitFlash: 0 });
@@ -240,7 +249,7 @@ function fireAtNearest() {
   const dx = best.mesh.position.x - hero.pos.x;
   const dz = best.mesh.position.z - hero.pos.z;
   const len = Math.hypot(dx, dz) || 1;
-  const mesh = new THREE.Mesh(shotGeo, new THREE.MeshBasicMaterial({ color: 0x9df7d2 }));
+  const mesh = makeSprite(art.sprites.shot, 0.42, 0.42, 0.62);
   mesh.position.set(hero.pos.x, 0.62, hero.pos.z);
   actorRoot.add(mesh);
   shots.push({ mesh, dir: { x: dx / len, y: dz / len }, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
@@ -266,8 +275,8 @@ function burstWard() {
 }
 
 function dropGem(pos: THREE.Vector3, value: number) {
-  const mesh = new THREE.Mesh(xpGeo, new THREE.MeshBasicMaterial({ color: value > 1 ? 0xf1c566 : 0x58e0be }));
-  mesh.position.set(pos.x, 0.28, pos.z);
+  const mesh = makeSprite(value > 1 ? art.sprites.coin : art.sprites.relic, value > 1 ? 0.5 : 0.42, value > 1 ? 0.5 : 0.42, 0.32);
+  mesh.position.set(pos.x, 0.32, pos.z);
   actorRoot.add(mesh);
   gems.push({ mesh, value, pull: false });
 }
@@ -276,7 +285,7 @@ function damageEnemy(enemy: Enemy, amount: number) {
   enemy.hp -= amount;
   enemy.hitFlash = 0.08;
   for (let i = 0; i < 2; i++) {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), new THREE.MeshBasicMaterial({ color: 0xfff2bd }));
+    const p = makeSprite(art.sprites.shot, 0.18, 0.18, 0.5);
     p.position.copy(enemy.mesh.position);
     actorRoot.add(p);
     particles.push({ mesh: p, vel: new THREE.Vector3((Math.random() - 0.5) * 3, 2.2, (Math.random() - 0.5) * 3), life: 0.3 });
@@ -392,7 +401,7 @@ function updateEnemies(dt: number) {
     e.mesh.position.z += ((dz / len) * e.speed - (dx / len) * weave) * dt;
     e.mesh.rotation.y += dt * (e.kind === 'brute' ? 1.8 : 3.4);
     e.hitFlash = Math.max(0, e.hitFlash - dt);
-    (e.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(e.hitFlash > 0 ? 0xffffff : 0x000000);
+    (e.mesh.material as THREE.SpriteMaterial).color.setHex(e.hitFlash > 0 ? 0xffffff : stages[stageIndex].enemyTint);
     if (len < 0.8 && hero.invuln <= 0) {
       hero.hp -= Math.max(2, e.touch - hero.armor);
       hero.invuln = 0.5;
@@ -449,7 +458,9 @@ function updateParticles(dt: number) {
     p.vel.y -= 8 * dt;
     p.mesh.position.addScaledVector(p.vel, dt);
     p.mesh.scale.multiplyScalar(1 + dt * 5);
-    const mat = (p.mesh as THREE.Mesh).material as THREE.Material & { opacity?: number; transparent?: boolean };
+    const mat = p.mesh instanceof THREE.Sprite
+      ? p.mesh.material
+      : p.mesh.material as THREE.Material & { opacity?: number; transparent?: boolean };
     mat.transparent = true;
     mat.opacity = Math.max(0, p.life * 2);
     if (p.life <= 0) {

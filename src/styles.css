@@ -10,8 +10,8 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #10131a;
-  color: #f5f0e6;
+  background: #0e1417;
+  color: #fff4df;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   touch-action: none;
   user-select: none;
@@ -41,10 +41,10 @@ canvas {
 }
 
 .panel {
-  background: rgba(16, 19, 26, 0.72);
-  border: 1px solid rgba(245, 240, 230, 0.16);
+  background: linear-gradient(180deg, rgba(24, 31, 33, 0.86), rgba(12, 17, 19, 0.82));
+  border: 1px solid rgba(255, 230, 168, 0.22);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(10px);
 }
 
@@ -53,6 +53,7 @@ canvas {
 }
 
 .stage-name {
+  color: #ffe3a2;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.1;
@@ -60,7 +61,7 @@ canvas {
 
 .subline {
   margin-top: 2px;
-  color: #d8d0c2;
+  color: #d7d8c9;
   font-size: 11px;
 }
 
@@ -79,10 +80,11 @@ canvas {
 }
 
 .bar {
-  height: 9px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(3, 7, 8, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .bar > i {
@@ -93,11 +95,13 @@ canvas {
 }
 
 .hp > i {
-  background: linear-gradient(90deg, #e94b58, #ffb05f);
+  background: linear-gradient(90deg, #d73c4d, #ff9d55);
+  box-shadow: 0 0 12px rgba(255, 98, 80, 0.35);
 }
 
 .xp > i {
-  background: linear-gradient(90deg, #41d7b3, #72a8ff);
+  background: linear-gradient(90deg, #38dcc0, #8fd7ff);
+  box-shadow: 0 0 12px rgba(63, 222, 194, 0.32);
 }
 
 .bottom-hud {
@@ -120,7 +124,7 @@ canvas {
   display: grid;
   place-items: center;
   padding: 0 8px;
-  color: #f5f0e6;
+  color: #fff4df;
   font-size: 12px;
   font-weight: 800;
 }
@@ -133,8 +137,9 @@ canvas {
   height: 132px;
   pointer-events: auto;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(245, 240, 230, 0.13), rgba(245, 240, 230, 0.04) 62%, rgba(16, 19, 26, 0.18));
-  border: 1px solid rgba(245, 240, 230, 0.14);
+  background: radial-gradient(circle, rgba(255, 227, 162, 0.16), rgba(73, 114, 107, 0.09) 62%, rgba(8, 13, 14, 0.24));
+  border: 1px solid rgba(255, 230, 168, 0.2);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.24);
 }
 
 .stick {
@@ -144,8 +149,8 @@ canvas {
   width: 46px;
   height: 46px;
   border-radius: 999px;
-  background: #f5f0e6;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 34% 28%, #fff7d0, #d9b85e);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42), 0 0 18px rgba(255, 211, 105, 0.18);
 }
 
 .buttons {
@@ -160,14 +165,15 @@ canvas {
 .skill-button {
   width: 76px;
   height: 76px;
-  border: 1px solid rgba(245, 240, 230, 0.22);
+  border: 1px solid rgba(255, 230, 168, 0.36);
   border-radius: 999px;
-  color: #f5f0e6;
-  background: radial-gradient(circle at 35% 30%, #74d6b8, #235c5e 68%, #16252a);
+  color: #fff4df;
+  background: radial-gradient(circle at 35% 30%, #ffe4a2, #28927f 58%, #13272b);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0;
   pointer-events: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38), 0 0 18px rgba(64, 220, 194, 0.2);
 }
 
 .skill-button:disabled {
@@ -181,7 +187,7 @@ canvas {
   display: grid;
   align-items: center;
   padding: 18px;
-  background: rgba(16, 19, 26, 0.68);
+  background: radial-gradient(circle at 50% 42%, rgba(48, 64, 57, 0.48), rgba(9, 13, 15, 0.82));
   pointer-events: auto;
 }
 
@@ -193,13 +199,14 @@ canvas {
 
 .title {
   margin: 0;
+  color: #ffe3a2;
   font-size: clamp(30px, 11vw, 52px);
   line-height: 0.92;
   letter-spacing: 0;
 }
 
 .copy {
-  color: #d8d0c2;
+  color: #d7d8c9;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -210,10 +217,11 @@ canvas {
   min-height: 48px;
   border: 0;
   border-radius: 8px;
-  color: #141820;
-  background: #f1c566;
+  color: #121817;
+  background: linear-gradient(180deg, #ffe191, #d9a943);
   font-weight: 900;
   font-size: 15px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 8px 20px rgba(0, 0, 0, 0.28);
 }
 
 .upgrade-grid {
@@ -226,7 +234,7 @@ canvas {
   min-height: 74px;
   padding: 10px;
   text-align: left;
-  background: #f5f0e6;
+  background: linear-gradient(180deg, #fff4df, #decfba);
 }
 
 .upgrade span {
