@@ -50,9 +50,9 @@ or enable Pages in GitHub repository settings with GitHub Actions as the source.
 
 ## Character Art Pipeline
 
-The runtime uses a mobile-friendly 2D-in-3D character rig: each actor is a billboard group with a generated-art body layer plus separately animated arms, legs, weapon/casting glow, and shadow. Movement drives visible walk cycles; attacks drive the front arm/hand and weapon/casting layer.
+The runtime uses a mobile-friendly 2D-in-3D character rig: each actor is a billboard group with a generated-art body layer plus separately animated arms, legs, weapon/casting glow, and shadow. Movement drives visible walk cycles; attacks use windup, strike, and recovery poses for clearer timing.
 
-This repo includes a GPT Image generated source atlas at `assets/gpt-image-2/generated/character-atlas-source.png` and a transparent runtime import at `public/assets/sprites/gpt-character-atlas.png`. Future production passes should replace or extend those with the layered parts described in `ASSET_PROMPTS.md`.
+This repo includes GPT Image generated source atlases at `assets/gpt-image-2/generated/character-atlas-source.png` and `assets/gpt-image-2/generated/character-atlas-source-v2.png`. The current transparent runtime import is `public/assets/sprites/gpt-character-atlas-v2.png`. Future production passes should replace or extend those with the layered parts described in `ASSET_PROMPTS.md`.
 
 See `assets/gpt-image-2/` for the ready-to-run GPT Image asset pipeline and `ASSET_PROMPTS.md` for broader art direction notes.
 

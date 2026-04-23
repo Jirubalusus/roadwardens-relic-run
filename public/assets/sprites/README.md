@@ -2,7 +2,7 @@
 
 Generated GPT Image sprites go here when they are ready for runtime use.
 
-The current build loads `gpt-character-atlas.png` as the generated full-body source layer for the character rigs in `src/characters.ts`. The rigs also use animated limb layers so the game remains visibly animated even while production-quality per-part GPT Image files are being refined.
+The current build loads `gpt-character-atlas-v2.png` as the generated full-body source layer for the character rigs in `src/characters.ts`. The rigs also use animated limb layers so the game remains visibly animated even while production-quality per-part GPT Image files are being refined.
 
 Preferred production naming for layered characters:
 

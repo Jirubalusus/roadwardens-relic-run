@@ -32,7 +32,7 @@ type CharacterSpec = {
   parts: PartSpec[];
 };
 
-const atlasTexture = new THREE.TextureLoader().load('./assets/sprites/gpt-character-atlas.png');
+const atlasTexture = new THREE.TextureLoader().load('./assets/sprites/gpt-character-atlas-v2.png');
 atlasTexture.colorSpace = THREE.SRGBColorSpace;
 atlasTexture.minFilter = THREE.LinearMipmapLinearFilter;
 atlasTexture.magFilter = THREE.LinearFilter;
@@ -117,7 +117,7 @@ function atlasCellTexture(cell: [number, number]) {
 }
 
 function partTexture(spec: PartSpec) {
-  const size = 96;
+  const size = 128;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -128,43 +128,73 @@ function partTexture(spec: PartSpec) {
   if (spec.shape === 'shadow') {
     ctx.fillStyle = spec.color;
     ctx.beginPath();
-    ctx.ellipse(48, 58, 36, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(64, 76, 46, 12, 0, 0, Math.PI * 2);
     ctx.fill();
   } else if (spec.shape === 'glow') {
-    const grad = ctx.createRadialGradient(48, 48, 3, 48, 48, 42);
+    const grad = ctx.createRadialGradient(64, 64, 3, 64, 64, 56);
     grad.addColorStop(0, spec.color);
+    grad.addColorStop(0.34, spec.color);
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
   } else {
-    const grad = ctx.createLinearGradient(28, 18, 68, 82);
-    grad.addColorStop(0, '#fff1bc');
-    grad.addColorStop(0.16, spec.color);
-    grad.addColorStop(1, '#172026');
-    ctx.fillStyle = grad;
-    ctx.strokeStyle = '#12191d';
-    ctx.lineWidth = spec.shape === 'weapon' ? 10 : 7;
+    const grad = ctx.createLinearGradient(42, 18, 84, 112);
+    grad.addColorStop(0, '#fff3c6');
+    grad.addColorStop(0.18, spec.color);
+    grad.addColorStop(0.76, spec.color);
+    grad.addColorStop(1, '#11181c');
+    ctx.strokeStyle = '#10171b';
+    ctx.lineWidth = spec.shape === 'weapon' ? 12 : 8;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.beginPath();
+
     if (spec.shape === 'weapon') {
-      ctx.moveTo(48, 16);
-      ctx.lineTo(48, 80);
-      ctx.stroke();
-      ctx.strokeStyle = spec.color;
-      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(48, 16);
-      ctx.lineTo(48, 80);
+      ctx.moveTo(63, 18);
+      ctx.lineTo(67, 106);
+      ctx.stroke();
+      ctx.strokeStyle = '#f7d98c';
+      ctx.lineWidth = 5.5;
+      ctx.beginPath();
+      ctx.moveTo(63, 18);
+      ctx.lineTo(67, 106);
+      ctx.stroke();
+      ctx.fillStyle = spec.color;
+      ctx.beginPath();
+      ctx.arc(64, 25, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#10171b';
+      ctx.lineWidth = 4;
       ctx.stroke();
     } else {
-      ctx.roundRect(32, 14, 32, 68, 18);
+      const isLeg = spec.shape === 'leg';
+      const top = isLeg ? 22 : 16;
+      const bottom = isLeg ? 112 : 108;
+      const shoulder = isLeg ? 18 : 20;
+      const ankle = isLeg ? 15 : 13;
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(64 - shoulder, top + 8);
+      ctx.quadraticCurveTo(49, top, 58, top + 28);
+      ctx.lineTo(64 - ankle, bottom - 18);
+      ctx.quadraticCurveTo(64, bottom, 64 + ankle + (isLeg ? 8 : 2), bottom - 9);
+      ctx.lineTo(64 + shoulder, top + 14);
+      ctx.quadraticCurveTo(78, top - 2, 64 - shoulder, top + 8);
+      ctx.closePath();
       ctx.stroke();
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.22)';
+
+      ctx.fillStyle = isLeg ? 'rgba(15, 22, 28, .28)' : 'rgba(255, 255, 255, .18)';
       ctx.beginPath();
-      ctx.ellipse(43, 28, 6, 12, 0.55, 0, Math.PI * 2);
+      ctx.ellipse(56, top + 22, 6, 18, 0.55, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255, 236, 171, .46)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(72, top + 16);
+      ctx.quadraticCurveTo(76, 58, 70, bottom - 22);
+      ctx.stroke();
     }
   }
 
@@ -181,7 +211,9 @@ export class CharacterRig {
   private readonly spec: CharacterSpec;
   private readonly body: THREE.Sprite;
   private readonly parts = new Map<string, THREE.Sprite>();
+  private readonly baseScale = new Map<string, THREE.Vector3>();
   private walkClock = 0;
+  private hurtClock = 0;
 
   constructor(readonly kind: CharacterKind) {
     this.spec = specs[kind];
@@ -199,6 +231,7 @@ export class CharacterRig {
       sprite.position.set(part.x, part.y, part.z ?? 0);
       sprite.renderOrder = part.order;
       this.parts.set(part.name, sprite);
+      this.baseScale.set(part.name, sprite.scale.clone());
       this.group.add(sprite);
     }
     this.group.scale.setScalar(this.spec.scale);
@@ -213,37 +246,100 @@ export class CharacterRig {
   }
 
   update(dt: number, pose: RigPose) {
-    if (pose.moving) this.walkClock += dt * (this.kind === 'brute' ? 7.5 : this.kind === 'wisp' ? 5.8 : 10);
-    else this.walkClock += dt * 2.8;
+    const moveRate = this.kind === 'brute' ? 6.6 : this.kind === 'wisp' ? 5.4 : 9.4;
+    this.walkClock += dt * (pose.moving ? moveRate : 2.4);
+    this.hurtClock = Math.max(0, pose.hitFlash);
 
-    const stride = pose.moving ? Math.sin(this.walkClock) : Math.sin(this.walkClock) * 0.15;
-    const bob = pose.moving ? Math.abs(Math.sin(this.walkClock)) * 0.08 : Math.sin(this.walkClock * 0.8) * 0.025;
+    const step = Math.sin(this.walkClock);
+    const counterStep = Math.sin(this.walkClock + Math.PI);
+    const lift = Math.max(0, Math.sin(this.walkClock));
+    const counterLift = Math.max(0, Math.sin(this.walkClock + Math.PI));
+    const stride = pose.moving ? step : step * 0.08;
+    const bob = pose.moving
+      ? Math.abs(step) * (this.kind === 'brute' ? 0.045 : 0.075)
+      : Math.sin(this.walkClock * 0.85) * (this.kind === 'wisp' ? 0.055 : 0.022);
     const side = pose.facingX < -0.08 ? -1 : 1;
-    this.group.scale.x = this.spec.scale * side;
-    this.body.position.y = this.spec.y + bob;
-    this.body.material.color.setHex(pose.hitFlash > 0 ? 0xffffff : 0xffffff);
-
     const attack = THREE.MathUtils.clamp(pose.attack, 0, 1);
-    const swing = attack > 0 ? Math.sin(attack * Math.PI) : 0;
-    this.setPart('frontLeg', 0.16 * stride, -0.08 * Math.abs(stride), 0.38 * stride);
-    this.setPart('backLeg', -0.16 * stride, -0.05 * Math.abs(stride), -0.36 * stride);
-    this.setPart('backArm', -0.1 * stride, 0.03 * Math.abs(stride), 0.28 * stride);
-    this.setPart('frontArm', 0.1 * stride + swing * 0.28, swing * 0.08, -0.35 * stride - swing * 1.0);
-    this.setPart('weapon', swing * 0.32, swing * 0.14, -0.55 * swing);
+    const windup = attack < 0.28 ? attack / 0.28 : 0;
+    const strike = attack >= 0.28 && attack < 0.58 ? (attack - 0.28) / 0.3 : 0;
+    const recover = attack >= 0.58 ? (attack - 0.58) / 0.42 : 0;
+    const anticipation = windup ? easeOut(windup) : 0;
+    const slash = strike ? easeOutBack(strike) : 0;
+    const settle = recover ? 1 - easeOut(recover) : 0;
+    const attackPower = Math.max(slash, settle * 0.55);
+    const recoil = anticipation * (this.kind === 'brute' ? -0.13 : -0.18);
+    const lean = (pose.moving ? THREE.MathUtils.clamp(pose.facingZ, -1, 1) * -0.08 : 0) + attackPower * 0.09;
+    const squash = pose.moving ? Math.abs(step) * 0.025 : Math.sin(this.walkClock) * 0.008;
+
+    this.group.scale.set(this.spec.scale * side * (1 + squash * 0.35), this.spec.scale * (1 - squash), this.spec.scale);
+    this.body.position.x = recoil + attackPower * 0.08;
+    this.body.position.y = this.spec.y + bob + anticipation * 0.025;
+    this.body.rotation.z = lean;
+    this.body.material.color.setHex(this.hurtClock > 0 ? 0xfff1de : 0xffffff);
+
+    this.setPart('frontLeg', 0.18 * stride, 0.055 * lift - 0.035 * Math.abs(step), 0.46 * stride, 1, 1 - lift * 0.08);
+    this.setPart('backLeg', 0.18 * counterStep, 0.052 * counterLift - 0.028 * Math.abs(step), 0.42 * counterStep, 1, 1 - counterLift * 0.07);
+    this.setPart('backArm', -0.12 * stride - anticipation * 0.08, 0.02 * Math.abs(step), 0.34 * stride + anticipation * 0.38);
+    this.setPart(
+      'frontArm',
+      0.12 * counterStep + anticipation * -0.14 + attackPower * 0.34,
+      0.025 * Math.abs(step) + anticipation * 0.12 - attackPower * 0.04,
+      -0.36 * counterStep + anticipation * 0.95 - attackPower * 1.32,
+      1 + attackPower * 0.08,
+      1,
+    );
+    this.setPart(
+      'weapon',
+      anticipation * -0.16 + attackPower * 0.42,
+      anticipation * 0.16 + attackPower * 0.04,
+      anticipation * 0.82 - attackPower * 1.12,
+      1,
+      1 + attackPower * 0.12,
+    );
+    this.setPart('shadow', 0, 0, 0, 1 + bob * 1.9, 1 + bob * 0.35);
 
     const glow = this.parts.get('glow');
     if (glow) {
-      glow.scale.setScalar(0.9 + swing * 0.65 + Math.sin(this.walkClock * 1.7) * 0.04);
-      glow.material.opacity = this.kind === 'hero' ? 0.55 + swing * 0.35 : 0.36 + Math.sin(this.walkClock) * 0.08;
+      const base = this.baseScale.get('glow') ?? new THREE.Vector3(1, 1, 1);
+      const pulse = 1 + Math.sin(this.walkClock * 1.7) * 0.05;
+      glow.scale.set(base.x * (pulse + attackPower * 0.9), base.y * (pulse + attackPower * 0.9), 1);
+      glow.position.x = (this.spec.parts.find((p) => p.name === 'glow')?.x ?? 0) + attackPower * 0.28 - anticipation * 0.08;
+      glow.position.y = (this.spec.parts.find((p) => p.name === 'glow')?.y ?? 0) + attackPower * 0.08 + bob;
+      glow.material.opacity = this.kind === 'hero' ? 0.5 + attackPower * 0.42 : 0.32 + Math.sin(this.walkClock) * 0.08;
+    }
+
+    if (this.hurtClock > 0) {
+      const shake = Math.sin(this.hurtClock * 90) * 0.035;
+      this.body.position.x += shake;
+      for (const part of this.parts.values()) {
+        part.material.color.setHex(0xfff0dd);
+      }
+    } else {
+      for (const part of this.parts.values()) {
+        part.material.color.setHex(0xffffff);
+      }
     }
   }
 
-  private setPart(name: string, dx: number, dy: number, rotation: number) {
+  private setPart(name: string, dx: number, dy: number, rotation: number, sx = 1, sy = 1) {
     const part = this.parts.get(name);
     const spec = this.spec.parts.find((p) => p.name === name);
     if (!part || !spec) return;
+    const base = this.baseScale.get(name);
     part.position.x = spec.x + dx;
     part.position.y = spec.y + dy;
     part.rotation.z = rotation;
+    if (base) part.scale.set(base.x * sx, base.y * sy, 1);
   }
+}
+
+function easeOut(t: number) {
+  return 1 - Math.pow(1 - THREE.MathUtils.clamp(t, 0, 1), 3);
+}
+
+function easeOutBack(t: number) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  const x = THREE.MathUtils.clamp(t, 0, 1) - 1;
+  return 1 + c3 * x * x * x + c1 * x * x;
 }
