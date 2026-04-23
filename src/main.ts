@@ -156,6 +156,7 @@ let pointerId: number | null = null;
 let last = performance.now();
 let heroAttackTime = 0;
 let heroMoving = false;
+let heroAim: Vec2 = { x: 1, y: 0 };
 
 function resize() {
   const w = window.innerWidth;
@@ -250,10 +251,11 @@ function fireAtNearest() {
   const dx = best.rig.position.x - hero.pos.x;
   const dz = best.rig.position.z - hero.pos.z;
   const len = Math.hypot(dx, dz) || 1;
+  heroAim = { x: dx / len, y: dz / len };
   const mesh = makeSprite(art.sprites.shot, 0.42, 0.42, 0.62);
   mesh.position.set(hero.pos.x, 0.62, hero.pos.z);
   actorRoot.add(mesh);
-  shots.push({ mesh, dir: { x: dx / len, y: dz / len }, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
+  shots.push({ mesh, dir: heroAim, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
   heroAttackTime = 0.34;
 }
 
@@ -370,12 +372,14 @@ function update(dt: number) {
   hero.pos.x = THREE.MathUtils.clamp(hero.pos.x, -38, 38);
   hero.pos.z = THREE.MathUtils.clamp(hero.pos.z, -38, 38);
   heroRig.setPosition(hero.pos);
+  const attackT = heroAttackTime > 0 ? 1 - heroAttackTime / 0.34 : 0;
+  const facing = attackT > 0 ? heroAim : input;
   heroRig.update(dt, {
     moving: heroMoving,
-    attack: heroAttackTime > 0 ? 1 - heroAttackTime / 0.34 : 0,
+    attack: attackT,
     hitFlash: hero.invuln,
-    facingX: input.x,
-    facingZ: input.y,
+    facingX: facing.x,
+    facingZ: facing.y,
   });
   aimRing.position.set(hero.pos.x, 0.04, hero.pos.z);
   aimRing.scale.setScalar(1 + Math.sin(performance.now() * 0.006) * 0.04);
