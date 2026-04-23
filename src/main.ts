@@ -155,6 +155,7 @@ let input: Vec2 = { x: 0, y: 0 };
 let pointerId: number | null = null;
 let last = performance.now();
 let heroAttackTime = 0;
+let heroAimHoldTime = 0;
 let heroMoving = false;
 let heroAim: Vec2 = { x: 1, y: 0 };
 
@@ -257,6 +258,7 @@ function fireAtNearest() {
   actorRoot.add(mesh);
   shots.push({ mesh, dir: heroAim, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
   heroAttackTime = 0.34;
+  heroAimHoldTime = Math.max(heroAimHoldTime, 0.72);
 }
 
 function burstWard() {
@@ -355,6 +357,7 @@ function update(dt: number) {
   stageTime += dt;
   hero.cooldown -= dt;
   heroAttackTime = Math.max(0, heroAttackTime - dt);
+  heroAimHoldTime = Math.max(0, heroAimHoldTime - dt);
   hero.burstCooldown = Math.max(0, hero.burstCooldown - dt);
   hero.invuln = Math.max(0, hero.invuln - dt);
   spawnTimer -= dt;
@@ -373,13 +376,17 @@ function update(dt: number) {
   hero.pos.z = THREE.MathUtils.clamp(hero.pos.z, -38, 38);
   heroRig.setPosition(hero.pos);
   const attackT = heroAttackTime > 0 ? 1 - heroAttackTime / 0.34 : 0;
-  const facing = attackT > 0 ? heroAim : input;
+  const aiming = heroAimHoldTime > 0 && enemies.length > 0;
+  const facing = aiming ? heroAim : input;
   heroRig.update(dt, {
     moving: heroMoving,
+    aiming,
     attack: attackT,
     hitFlash: hero.invuln,
     facingX: facing.x,
     facingZ: facing.y,
+    moveX: heroMoving ? input.x : 0,
+    moveZ: heroMoving ? input.y : 0,
   });
   aimRing.position.set(hero.pos.x, 0.04, hero.pos.z);
   aimRing.scale.setScalar(1 + Math.sin(performance.now() * 0.006) * 0.04);

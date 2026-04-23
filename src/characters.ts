@@ -1,14 +1,17 @@
 import * as THREE from 'three';
 
 export type CharacterKind = 'hero' | 'skulk' | 'brute' | 'wisp';
-type AnimationState = 'idle' | 'walk' | 'attack' | 'hit';
+type AnimationState = 'idle' | 'walk' | 'moveAttack' | 'attack' | 'hit';
 
 export type RigPose = {
   moving: boolean;
+  aiming?: boolean;
   attack: number;
   hitFlash: number;
   facingX: number;
   facingZ: number;
+  moveX?: number;
+  moveZ?: number;
 };
 
 type PartSpec = {
@@ -54,6 +57,7 @@ heroStateSheet.generateMipmaps = true;
 const heroClips: Record<AnimationState, ClipSpec> = {
   idle: { frames: [0, 1, 2, 1], fps: 2.1, loop: true },
   walk: { frames: [4, 5, 6, 7], fps: 9.6, loop: true },
+  moveAttack: { frames: [4, 5, 6, 7], fps: 10.8, loop: true },
   attack: { frames: [8, 8, 9, 9, 9, 10], fps: 17.4, loop: false },
   hit: { frames: [11, 11, 3], fps: 9, loop: false },
 };
@@ -201,6 +205,98 @@ function makeHeroAttackFlashTexture() {
   return texture;
 }
 
+function makeHeroMoveAttackArmTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const sleeve = ctx.createLinearGradient(38, 44, 92, 78);
+  sleeve.addColorStop(0, '#172338');
+  sleeve.addColorStop(0.38, '#2d5f9a');
+  sleeve.addColorStop(1, '#f0bf67');
+
+  ctx.strokeStyle = '#10171b';
+  ctx.lineWidth = 17;
+  ctx.beginPath();
+  ctx.moveTo(35, 71);
+  ctx.quadraticCurveTo(58, 56, 94, 61);
+  ctx.stroke();
+
+  ctx.strokeStyle = sleeve;
+  ctx.lineWidth = 11;
+  ctx.beginPath();
+  ctx.moveTo(35, 71);
+  ctx.quadraticCurveTo(58, 56, 94, 61);
+  ctx.stroke();
+
+  ctx.fillStyle = '#f4c57a';
+  ctx.strokeStyle = '#10171b';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(95, 61, 9, 7, 0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  return texture;
+}
+
+function makeHeroMoveAttackWeaponTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.strokeStyle = '#10171b';
+  ctx.lineWidth = 11;
+  ctx.beginPath();
+  ctx.moveTo(28, 68);
+  ctx.lineTo(107, 52);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#e9c16e';
+  ctx.lineWidth = 5.5;
+  ctx.beginPath();
+  ctx.moveTo(30, 68);
+  ctx.lineTo(106, 52);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#fff0b0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(59, 62);
+  ctx.lineTo(104, 53);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffd977';
+  ctx.strokeStyle = '#10171b';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(107, 52, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  return texture;
+}
+
 function partTexture(spec: PartSpec) {
   const size = 128;
   const canvas = document.createElement('canvas');
@@ -298,6 +394,8 @@ export class CharacterRig {
   private readonly heroFrames?: THREE.Texture[];
   private readonly shadow?: THREE.Sprite;
   private readonly attackFlash?: THREE.Sprite;
+  private readonly moveAttackArm?: THREE.Sprite;
+  private readonly moveAttackWeapon?: THREE.Sprite;
   private readonly parts = new Map<string, THREE.Sprite>();
   private readonly baseScale = new Map<string, THREE.Vector3>();
   private state: AnimationState = 'idle';
@@ -336,6 +434,20 @@ export class CharacterRig {
       attackFlash.renderOrder = 12;
       this.attackFlash = attackFlash;
       this.group.add(attackFlash);
+      const moveAttackArm = new THREE.Sprite(makeMaterial(makeHeroMoveAttackArmTexture(), 0));
+      moveAttackArm.scale.set(0.62, 0.48, 1);
+      moveAttackArm.position.set(0.34, 1.02, 0.05);
+      moveAttackArm.renderOrder = 13;
+      moveAttackArm.visible = false;
+      this.moveAttackArm = moveAttackArm;
+      this.group.add(moveAttackArm);
+      const moveAttackWeapon = new THREE.Sprite(makeMaterial(makeHeroMoveAttackWeaponTexture(), 0));
+      moveAttackWeapon.scale.set(0.74, 0.54, 1);
+      moveAttackWeapon.position.set(0.56, 1.02, 0.06);
+      moveAttackWeapon.renderOrder = 14;
+      moveAttackWeapon.visible = false;
+      this.moveAttackWeapon = moveAttackWeapon;
+      this.group.add(moveAttackWeapon);
       this.group.scale.setScalar(0.86);
       return;
     }
@@ -476,37 +588,46 @@ export class CharacterRig {
       this.lastFrame = frame;
     }
 
-    const movingAttack = pose.moving && pose.attack > 0;
-    const rate = this.state === 'walk' ? 9.6 : this.state === 'attack' ? 5.8 : 2.1;
+    const movingAttack = this.state === 'moveAttack';
+    const rate = this.state === 'walk' ? 9.6 : this.state === 'moveAttack' ? 10.8 : this.state === 'attack' ? 5.8 : 2.1;
     this.walkClock += dt * rate;
     const step = Math.sin(this.walkClock);
+    const counterStep = Math.sin(this.walkClock + Math.PI);
     const attackT = THREE.MathUtils.clamp(pose.attack, 0, 1);
     const anticipation = attackT > 0 && attackT < 0.33 ? easeOut(attackT / 0.33) : 0;
     const strike = attackT >= 0.33 && attackT < 0.62 ? easeOutBack((attackT - 0.33) / 0.29) : 0;
     const recovery = attackT >= 0.62 ? 1 - easeOut((attackT - 0.62) / 0.38) : 0;
+    const moveLen = Math.hypot(pose.moveX ?? 0, pose.moveZ ?? 0);
+    const moveX = moveLen > 0.05 ? (pose.moveX ?? 0) / moveLen : facing.x;
+    const moveZ = moveLen > 0.05 ? (pose.moveZ ?? 0) / moveLen : facing.z;
+    const forward = THREE.MathUtils.clamp(moveX * facing.x + moveZ * facing.z, -1, 1);
+    const strafe = THREE.MathUtils.clamp(moveX * facing.z - moveZ * facing.x, -1, 1);
+    const ready = movingAttack ? 0.62 : 0;
+    const firePower = Math.max(strike, recovery * 0.6);
     const locomotionLean = pose.moving ? THREE.MathUtils.clamp(facing.z, -1, 1) * -0.08 : 0;
     const attackLean = movingAttack
-      ? anticipation * -0.18 + strike * 0.26 + recovery * 0.1
+      ? anticipation * -0.07 + strike * 0.12 + recovery * 0.05
       : this.state === 'attack'
         ? anticipation * -0.62 + strike * 0.82 + recovery * 0.24
         : 0;
     const hurtLean = this.state === 'hit' ? -0.12 + Math.sin(this.stateTime * 42) * 0.05 : 0;
-    const bob = this.state === 'walk'
-      ? Math.abs(step) * 0.07 + (movingAttack ? strike * 0.025 - anticipation * 0.012 : 0)
+    const bob = this.state === 'walk' || this.state === 'moveAttack'
+      ? Math.abs(step) * (movingAttack ? 0.052 : 0.07) + (movingAttack ? strike * 0.018 - anticipation * 0.008 : 0)
       : this.state === 'idle'
         ? Math.sin(this.walkClock * 0.7) * 0.018
         : -anticipation * 0.04 + strike * 0.05;
-    const squash = this.state === 'walk' ? Math.abs(step) * 0.03 + strike * 0.01 : strike * 0.02;
+    const squash = this.state === 'walk' || this.state === 'moveAttack' ? Math.abs(step) * 0.03 + strike * 0.01 : strike * 0.02;
     const recoil = movingAttack ? anticipation * -0.035 + strike * 0.05 : attackLean * 0.1;
+    const strafeDip = movingAttack ? Math.abs(strafe) * Math.abs(counterStep) * 0.024 : 0;
 
     this.group.scale.set(0.86 * side * (1 + squash * 0.28), 0.86 * (1 - squash), 0.86);
-    this.body.position.x = recoil - hurtLean * 0.45;
-    this.body.position.y = 0.96 + bob;
-    this.body.rotation.z = locomotionLean + attackLean * -0.055 + hurtLean;
+    this.body.position.x = recoil - hurtLean * 0.45 + (movingAttack ? strafe * 0.035 * Math.sin(this.walkClock) : 0);
+    this.body.position.y = 0.96 + bob - strafeDip;
+    this.body.rotation.z = locomotionLean * (movingAttack ? 0.45 : 1) + attackLean * -0.055 + hurtLean + (movingAttack ? strafe * 0.035 + forward * -0.015 : 0);
     this.body.material.color.setHex(pose.hitFlash > 0 ? 0xfff1de : 0xffffff);
 
     if (this.shadow) {
-      const shadowPulse = this.state === 'walk' ? 1 + Math.abs(step) * 0.1 : 1;
+      const shadowPulse = this.state === 'walk' || this.state === 'moveAttack' ? 1 + Math.abs(step) * 0.1 : 1;
       this.shadow.scale.set(1.15 * shadowPulse, 0.24 * (1 + bob * 0.4), 1);
       this.shadow.material.opacity = 0.72;
     }
@@ -514,11 +635,28 @@ export class CharacterRig {
     if (this.attackFlash) {
       const flash = Math.max(strike, recovery * 0.45);
       this.attackFlash.visible = flash > 0.01;
-      this.attackFlash.position.x = 0.5 + strike * 0.1 + (movingAttack ? Math.abs(step) * 0.04 : 0);
-      this.attackFlash.position.y = 1.02 + bob * 0.5 + strike * 0.05;
+      this.attackFlash.position.x = 0.5 + strike * 0.1 + (movingAttack ? Math.abs(step) * 0.025 + strafe * 0.025 : 0);
+      this.attackFlash.position.y = 1.02 + bob * 0.5 + strike * 0.05 + (movingAttack ? ready * 0.02 : 0);
       this.attackFlash.rotation.z = -0.45 + attackLean * -0.18;
       this.attackFlash.scale.setScalar(0.72 + flash * 0.26);
       this.attackFlash.material.opacity = flash * (movingAttack ? 0.72 : 0.92);
+    }
+
+    const overlayOpacity = movingAttack ? THREE.MathUtils.clamp(ready + firePower * 0.38, 0, 1) : 0;
+    if (this.moveAttackArm) {
+      this.moveAttackArm.visible = overlayOpacity > 0.01;
+      this.moveAttackArm.position.x = 0.27 + recoil * 0.5 + strafe * 0.025;
+      this.moveAttackArm.position.y = 1.0 + bob * 0.42 - Math.abs(step) * 0.012 + firePower * 0.025;
+      this.moveAttackArm.rotation.z = -0.08 + strafe * 0.05 + anticipation * -0.05 + firePower * -0.02;
+      this.moveAttackArm.material.opacity = overlayOpacity * 0.92;
+    }
+    if (this.moveAttackWeapon) {
+      this.moveAttackWeapon.visible = overlayOpacity > 0.01;
+      this.moveAttackWeapon.position.x = 0.5 + recoil * 0.6 + strafe * 0.03 + firePower * 0.035;
+      this.moveAttackWeapon.position.y = 1.01 + bob * 0.38 + firePower * 0.02;
+      this.moveAttackWeapon.rotation.z = -0.1 + strafe * 0.04 + anticipation * -0.04 + firePower * -0.05;
+      this.moveAttackWeapon.scale.set(0.74 + firePower * 0.05, 0.54 + firePower * 0.03, 1);
+      this.moveAttackWeapon.material.opacity = overlayOpacity;
     }
   }
 
@@ -539,7 +677,7 @@ export class CharacterRig {
 
 function resolveState(pose: RigPose, usesStateSheet = false): AnimationState {
   if (pose.hitFlash > 0.18) return 'hit';
-  if (usesStateSheet && pose.moving && pose.attack > 0) return 'walk';
+  if (usesStateSheet && pose.moving && (pose.attack > 0 || pose.aiming)) return 'moveAttack';
   if (pose.attack > 0) return 'attack';
   if (pose.moving) return 'walk';
   return 'idle';
