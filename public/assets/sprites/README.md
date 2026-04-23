@@ -2,7 +2,11 @@
 
 Generated GPT Image sprites go here when they are ready for runtime use.
 
-The current build loads `gpt-character-atlas-v2.png` as the generated full-body source layer for the character rigs in `src/characters.ts`. The rigs also use animated limb layers so the game remains visibly animated even while production-quality per-part GPT Image files are being refined.
+The current build loads `hero-mira/mira-state-sheet.webp` as the generated full-body hero animation sheet in `src/characters.ts`. The hero is selected from explicit `idle`, `walk`, `attack`, and `hit` clips, so movement and attacks swap complete character poses instead of holding one fixed body sprite.
+
+`gpt-character-atlas-v2.png` is still used by the enemy rigs. Enemy animation continues through the shared state-machine update path, with procedural limb motion retained until matching enemy state sheets are produced.
+
+Source PNGs for generated sheets live outside the public runtime payload under `assets/gpt-image-2/generated/`.
 
 Preferred production naming for layered characters:
 

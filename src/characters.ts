@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 export type CharacterKind = 'hero' | 'skulk' | 'brute' | 'wisp';
+type AnimationState = 'idle' | 'walk' | 'attack' | 'hit';
 
 export type RigPose = {
   moving: boolean;
@@ -32,11 +33,30 @@ type CharacterSpec = {
   parts: PartSpec[];
 };
 
+type ClipSpec = {
+  frames: number[];
+  fps: number;
+  loop: boolean;
+};
+
 const atlasTexture = new THREE.TextureLoader().load('./assets/sprites/gpt-character-atlas-v2.png');
 atlasTexture.colorSpace = THREE.SRGBColorSpace;
 atlasTexture.minFilter = THREE.LinearMipmapLinearFilter;
 atlasTexture.magFilter = THREE.LinearFilter;
 atlasTexture.generateMipmaps = true;
+
+const heroStateSheet = new THREE.TextureLoader().load('./assets/sprites/hero-mira/mira-state-sheet.webp');
+heroStateSheet.colorSpace = THREE.SRGBColorSpace;
+heroStateSheet.minFilter = THREE.LinearMipmapLinearFilter;
+heroStateSheet.magFilter = THREE.LinearFilter;
+heroStateSheet.generateMipmaps = true;
+
+const heroClips: Record<AnimationState, ClipSpec> = {
+  idle: { frames: [0, 1, 2, 1], fps: 2.4, loop: true },
+  walk: { frames: [4, 5, 6, 7], fps: 9.5, loop: true },
+  attack: { frames: [8, 9, 10], fps: 14, loop: false },
+  hit: { frames: [11], fps: 8, loop: false },
+};
 
 const specs: Record<CharacterKind, CharacterSpec> = {
   hero: {
@@ -113,6 +133,35 @@ function atlasCellTexture(cell: [number, number]) {
   texture.needsUpdate = true;
   texture.repeat.set(0.5, 0.5);
   texture.offset.set(cell[0] * 0.5, (1 - cell[1]) * 0.5);
+  return texture;
+}
+
+function sheetFrameTexture(source: THREE.Texture, frame: number, columns: number, rows: number) {
+  const texture = source.clone();
+  const col = frame % columns;
+  const row = Math.floor(frame / columns);
+  texture.needsUpdate = true;
+  texture.repeat.set(1 / columns, 1 / rows);
+  texture.offset.set(col / columns, (rows - 1 - row) / rows);
+  return texture;
+}
+
+function makeShadowTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = 'rgba(5,8,10,.36)';
+  ctx.beginPath();
+  ctx.ellipse(64, 74, 48, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
   return texture;
 }
 
@@ -210,19 +259,40 @@ export class CharacterRig {
   readonly group = new THREE.Group();
   private readonly spec: CharacterSpec;
   private readonly body: THREE.Sprite;
+  private readonly heroFrames?: THREE.Texture[];
+  private readonly shadow?: THREE.Sprite;
   private readonly parts = new Map<string, THREE.Sprite>();
   private readonly baseScale = new Map<string, THREE.Vector3>();
+  private state: AnimationState = 'idle';
+  private stateTime = 0;
+  private lastFrame = -1;
   private walkClock = 0;
   private hurtClock = 0;
 
   constructor(readonly kind: CharacterKind) {
     this.spec = specs[kind];
-    const body = new THREE.Sprite(makeMaterial(atlasCellTexture(this.spec.atlasCell)));
+    this.heroFrames = kind === 'hero'
+      ? Array.from({ length: 12 }, (_, frame) => sheetFrameTexture(heroStateSheet, frame, 4, 3))
+      : undefined;
+    const body = new THREE.Sprite(makeMaterial(this.heroFrames?.[0] ?? atlasCellTexture(this.spec.atlasCell)));
     body.scale.set(this.spec.width, this.spec.height, 1);
     body.position.y = this.spec.y;
     body.renderOrder = 5;
     this.body = body;
     this.group.add(body);
+
+    if (this.heroFrames) {
+      body.scale.set(2.05, 2.05, 1);
+      body.position.y = 0.98;
+      const shadow = new THREE.Sprite(makeMaterial(makeShadowTexture(), 0.86));
+      shadow.scale.set(1.15, 0.24, 1);
+      shadow.position.y = 0.05;
+      shadow.renderOrder = 0;
+      this.shadow = shadow;
+      this.group.add(shadow);
+      this.group.scale.setScalar(0.86);
+      return;
+    }
 
     for (const part of this.spec.parts) {
       const sprite = new THREE.Sprite(makeMaterial(partTexture(part), part.shape === 'glow' ? 0.72 : 1));
@@ -246,6 +316,20 @@ export class CharacterRig {
   }
 
   update(dt: number, pose: RigPose) {
+    const nextState = resolveState(pose);
+    if (nextState !== this.state) {
+      this.state = nextState;
+      this.stateTime = 0;
+      this.lastFrame = -1;
+    } else {
+      this.stateTime += dt;
+    }
+
+    if (this.heroFrames) {
+      this.updateHeroSheet(dt, pose);
+      return;
+    }
+
     const moveRate = this.kind === 'brute' ? 6.6 : this.kind === 'wisp' ? 5.4 : 9.4;
     this.walkClock += dt * (pose.moving ? moveRate : 2.4);
     this.hurtClock = Math.max(0, pose.hitFlash);
@@ -331,6 +415,48 @@ export class CharacterRig {
     part.rotation.z = rotation;
     if (base) part.scale.set(base.x * sx, base.y * sy, 1);
   }
+
+  private updateHeroSheet(dt: number, pose: RigPose) {
+    const side = pose.facingX < -0.08 ? -1 : 1;
+    const clip = heroClips[this.state];
+    const rawFrame = Math.floor(this.stateTime * clip.fps);
+    const frameIndex = clip.loop ? rawFrame % clip.frames.length : Math.min(rawFrame, clip.frames.length - 1);
+    const frame = clip.frames[frameIndex];
+    if (frame !== this.lastFrame) {
+      this.body.material.map = this.heroFrames?.[frame] ?? this.body.material.map;
+      this.body.material.needsUpdate = true;
+      this.lastFrame = frame;
+    }
+
+    const rate = this.state === 'walk' ? 10 : 2.4;
+    this.walkClock += dt * rate;
+    const step = Math.sin(this.walkClock);
+    const attackLean = this.state === 'attack' ? Math.sin(Math.min(1, this.stateTime * 5.8) * Math.PI) : 0;
+    const hurtLean = this.state === 'hit' ? Math.sin(this.stateTime * 36) * 0.08 : 0;
+    const bob = this.state === 'walk'
+      ? Math.abs(step) * 0.065
+      : Math.sin(this.walkClock * 0.7) * 0.016;
+    const squash = this.state === 'walk' ? Math.abs(step) * 0.025 : 0;
+
+    this.group.scale.set(0.86 * side * (1 + squash * 0.2), 0.86 * (1 - squash), 0.86);
+    this.body.position.x = attackLean * 0.06 - hurtLean * 0.5;
+    this.body.position.y = 0.98 + bob;
+    this.body.rotation.z = attackLean * -0.06 + hurtLean;
+    this.body.material.color.setHex(pose.hitFlash > 0 ? 0xfff1de : 0xffffff);
+
+    if (this.shadow) {
+      const shadowPulse = this.state === 'walk' ? 1 + Math.abs(step) * 0.1 : 1;
+      this.shadow.scale.set(1.15 * shadowPulse, 0.24 * (1 + bob * 0.4), 1);
+      this.shadow.material.opacity = 0.72;
+    }
+  }
+}
+
+function resolveState(pose: RigPose): AnimationState {
+  if (pose.hitFlash > 0.18) return 'hit';
+  if (pose.attack > 0) return 'attack';
+  if (pose.moving) return 'walk';
+  return 'idle';
 }
 
 function easeOut(t: number) {
