@@ -6,15 +6,23 @@ Use these prompts with ChatGPT image generation or the checked-in GPT Image pipe
 
 Mobile-readable stylized fantasy, warm lantern light against cool twilight shadows, chunky silhouettes, clean value grouping, no existing franchise symbols, no copyrighted races or named visual motifs. Isometric game asset view, readable from a small phone screen, slightly painterly but with crisp edges.
 
+## Runtime Character Rig
+
+Runtime convention: characters are 2D-in-3D billboard rigs. Generate one full-body reference layer plus separate transparent layers for body, head, front/back arms, front/back legs, hand weapon or casting focus, and optional glow. All layers for a character must use the same square canvas, baseline, scale, and camera angle so `src/characters.ts` can animate them by rotating/translating layers around stable pivots.
+
+Prompt template for part sets: "Original fantasy mobile game character part sheet for a 2D-in-3D isometric billboard rig. Character: [hero/enemy description]. Produce separate transparent PNG layers on a shared 256x256 canvas: full body reference, torso/body, head, front arm, back arm, front leg, back leg, hand weapon or casting focus, magic glow. Same pose scale and baseline across every layer, crisp alpha edges, chunky mobile-readable silhouette, three-quarter isometric view, no text, no labels, no watermark."
+
+Pivot requirements: arms pivot at shoulder, legs pivot at hip, weapon pivots at hand, glow is centered on the casting hand. Avoid cloth/hair shapes that hide the feet during the walk cycle.
+
 ## Hero
 
-Prompt: "Original fantasy roadwarden heroine named Mira, compact mobile game character, blue travel cloak, brass road lantern, short ashwood sling staff, determined expression, warm gold accents, stylized isometric 3D-to-2D game sprite, transparent background, four directional poses, strong silhouette, readable at 64px, no text, no logo."
+Prompt: "Original fantasy roadwarden heroine named Mira, compact mobile game character, blue travel cloak, brass road lantern, short ashwood sling staff, determined expression, warm gold accents, stylized isometric 3D-to-2D game sprite, transparent background, strong silhouette, readable at 64px, no text, no logo. Also generate matching separated rig layers: body, head, front arm, back arm, front leg, back leg, sling staff hand, lantern magic glow."
 
 Specs: generate idle, run, hurt, cast, and victory poses. Keep cloak and lantern as identity anchors. Avoid resemblance to any existing fantasy film characters.
 
 ## Enemies
 
-Prompt: "Set of original twilight road-haunt enemies for a mobile action survivor: thorn skulk, oathless stone brute, marsh candle wisp, cinder pass shardling, stylized isometric game sprites, chunky readable silhouettes, warm rim light, transparent background, no text."
+Prompt: "Set of original twilight road-haunt enemies for a mobile action survivor: thorn skulk, oathless stone brute, marsh candle wisp, cinder pass shardling, stylized isometric game sprites, chunky readable silhouettes, warm rim light, transparent background, no text. Also generate matching separated rig layers for each enemy: body, head if applicable, front arm, back arm, front leg, back leg or floating tendrils, attack hand/club/glow."
 
 Specs: each enemy needs idle, move, hit, and dissolve frames. Use distinct shapes: low triangular skulk, square brute, floating wisp, jagged shardling.
 

@@ -1,5 +1,29 @@
 [
   {
+    "id": "gpt-character-atlas",
+    "output": "public/assets/sprites/gpt-character-atlas.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: runtime 2x2 full-body character atlas for a mobile 2D-in-3D isometric game. Primary request: four separated full-body characters arranged in a precise 2x2 grid with generous padding: top-left original roadwarden heroine Mira with blue cloak and gold lantern magic; top-right crimson thorn skulk enemy; bottom-left square grey oathless stone brute; bottom-right teal marsh candle wisp. Style/medium: polished hand-painted 2D fantasy game art, crisp alpha, high contrast, readable at small mobile size. Composition/framing: each character centered head-to-toe in its cell, same camera angle and baseline. Constraints: transparent background, no text, no watermark, no UI, no franchise resemblance."
+  },
+  {
+    "id": "hero-mira-rig-parts",
+    "output": "public/assets/sprites/hero-mira-rig-parts.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: character rig part sheet for mobile 2D-in-3D billboard animation. Primary request: original roadwarden heroine Mira, blue travel cloak, brass lantern magic, short sling staff. Generate separated parts on transparent background: full body reference, torso/body, head, front arm, back arm, front leg, back leg, sling staff/weapon, gold-teal casting glow. Style/medium: stylized hand-painted isometric mobile RPG sprite art, crisp alpha edges, chunky readable silhouette. Composition/framing: each part isolated with padding but matching the same scale, three-quarter camera angle, and foot baseline; pivots should be visually clear at shoulders, hips, and hand. Constraints: no labels, no text, no watermark, no background."
+  },
+  {
+    "id": "enemy-rig-parts",
+    "output": "public/assets/sprites/enemy-rig-parts.png",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "prompt": "Use case: stylized-concept. Asset type: enemy rig part sheet for mobile 2D-in-3D billboard animation. Primary request: separated transparent parts for three original enemies: crimson thorn skulk, grey oathless stone brute, teal marsh candle wisp. For each enemy include full body reference, body/torso, front limb, back limb, front leg or lower tendril, back leg or lower tendril, attack hand/club/glow. Style/medium: stylized hand-painted isometric mobile game art, crisp alpha, chunky silhouettes. Composition/framing: parts grouped by enemy, same scale and camera angle within each enemy set, clear shoulder/hip/hand pivots. Constraints: no labels, no text, no watermark, no background."
+  },
+  {
     "id": "hero-mira-idle",
     "output": "public/assets/sprites/hero-mira-idle.png",
     "size": "1024x1024",

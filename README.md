@@ -48,12 +48,16 @@ gh api -X POST repos/:owner/:repo/pages -f source.branch=gh-pages -f source.path
 
 or enable Pages in GitHub repository settings with GitHub Actions as the source.
 
-## Placeholder Art Pipeline
+## Character Art Pipeline
 
-The current build uses lightweight runtime canvas sprites and textured ground materials for performance and mobile readability. See `assets/gpt-image-2/` for the ready-to-run GPT Image asset pipeline and `ASSET_PROMPTS.md` for broader art direction notes.
+The runtime uses a mobile-friendly 2D-in-3D character rig: each actor is a billboard group with a generated-art body layer plus separately animated arms, legs, weapon/casting glow, and shadow. Movement drives visible walk cycles; attacks drive the front arm/hand and weapon/casting layer.
+
+This repo includes a GPT Image generated source atlas at `assets/gpt-image-2/generated/character-atlas-source.png` and a transparent runtime import at `public/assets/sprites/gpt-character-atlas.png`. Future production passes should replace or extend those with the layered parts described in `ASSET_PROMPTS.md`.
+
+See `assets/gpt-image-2/` for the ready-to-run GPT Image asset pipeline and `ASSET_PROMPTS.md` for broader art direction notes.
 
 ```bash
 npm run assets:gpt-image
 ```
 
-Set `OPENAI_API_KEY` first. The pipeline writes generated sprites to `public/assets/sprites/`.
+Set `OPENAI_API_KEY` first when using the API script. The pipeline writes generated sprites to `public/assets/sprites/`.

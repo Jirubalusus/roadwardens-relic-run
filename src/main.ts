@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createRuntimeArt } from './art';
+import { CharacterRig } from './characters';
 import './styles.css';
 
 type Vec2 = { x: number; y: number };
@@ -133,14 +134,12 @@ const hero = {
   invuln: 0,
 };
 
-const heroMesh = new THREE.Group();
-const heroSprite = makeSprite(art.sprites.hero, 1.45, 1.65, 0.86);
-heroMesh.add(heroSprite);
-actorRoot.add(heroMesh);
+const heroRig = new CharacterRig('hero');
+actorRoot.add(heroRig.group);
 
 const props: THREE.Object3D[] = [];
 
-type Enemy = { mesh: THREE.Sprite; hp: number; maxHp: number; speed: number; touch: number; kind: 'skulk' | 'brute' | 'wisp'; hitFlash: number };
+type Enemy = { rig: CharacterRig; hp: number; maxHp: number; speed: number; touch: number; kind: 'skulk' | 'brute' | 'wisp'; hitFlash: number; attackTime: number };
 type Shot = { mesh: THREE.Sprite; dir: Vec2; life: number; damage: number; pierce: number };
 type Gem = { mesh: THREE.Sprite; value: number; pull: boolean };
 const enemies: Enemy[] = [];
@@ -155,6 +154,8 @@ let runState: 'menu' | 'playing' | 'upgrade' | 'won' | 'lost' = 'menu';
 let input: Vec2 = { x: 0, y: 0 };
 let pointerId: number | null = null;
 let last = performance.now();
+let heroAttackTime = 0;
+let heroMoving = false;
 
 function resize() {
   const w = window.innerWidth;
@@ -218,7 +219,8 @@ function startRun() {
 }
 
 function clearWorld() {
-  [...enemies.splice(0), ...shots.splice(0), ...gems.splice(0), ...particles.splice(0)].forEach((entity: any) => actorRoot.remove(entity.mesh));
+  enemies.splice(0).forEach((enemy) => actorRoot.remove(enemy.rig.group));
+  [...shots.splice(0), ...gems.splice(0), ...particles.splice(0)].forEach((entity: any) => actorRoot.remove(entity.mesh));
 }
 
 function spawnEnemy() {
@@ -227,12 +229,11 @@ function spawnEnemy() {
   const kind: Enemy['kind'] = roll > 0.84 && stageIndex > 0 ? 'brute' : roll > 0.63 && stageIndex > 1 ? 'wisp' : 'skulk';
   const angle = Math.random() * Math.PI * 2;
   const dist = 12 + Math.random() * 3;
-  const mesh = makeSprite(kind === 'brute' ? art.sprites.brute : kind === 'wisp' ? art.sprites.wisp : art.sprites.skulk, kind === 'brute' ? 1.45 : 1.15, kind === 'brute' ? 1.45 : 1.2, kind === 'brute' ? 0.75 : 0.64);
-  (mesh.material as THREE.SpriteMaterial).color.setHex(stage.enemyTint);
-  mesh.position.set(hero.pos.x + Math.cos(angle) * dist, mesh.position.y, hero.pos.z + Math.sin(angle) * dist);
-  actorRoot.add(mesh);
+  const rig = new CharacterRig(kind);
+  rig.group.position.set(hero.pos.x + Math.cos(angle) * dist, 0, hero.pos.z + Math.sin(angle) * dist);
+  actorRoot.add(rig.group);
   const hp = (kind === 'brute' ? 10 : kind === 'wisp' ? 5 : 3) * (1 + stageIndex * 0.45);
-  enemies.push({ mesh, hp, maxHp: hp, speed: (kind === 'brute' ? 2.3 : kind === 'wisp' ? 4.1 : 3.1) * stage.speed, touch: kind === 'brute' ? 18 : 10, kind, hitFlash: 0 });
+  enemies.push({ rig, hp, maxHp: hp, speed: (kind === 'brute' ? 2.3 : kind === 'wisp' ? 4.1 : 3.1) * stage.speed, touch: kind === 'brute' ? 18 : 10, kind, hitFlash: 0, attackTime: 0 });
 }
 
 function fireAtNearest() {
@@ -240,19 +241,20 @@ function fireAtNearest() {
   let best = enemies[0];
   let bestD = Infinity;
   for (const e of enemies) {
-    const d = e.mesh.position.distanceToSquared(hero.pos);
+    const d = e.rig.position.distanceToSquared(hero.pos);
     if (d < bestD) {
       bestD = d;
       best = e;
     }
   }
-  const dx = best.mesh.position.x - hero.pos.x;
-  const dz = best.mesh.position.z - hero.pos.z;
+  const dx = best.rig.position.x - hero.pos.x;
+  const dz = best.rig.position.z - hero.pos.z;
   const len = Math.hypot(dx, dz) || 1;
   const mesh = makeSprite(art.sprites.shot, 0.42, 0.42, 0.62);
   mesh.position.set(hero.pos.x, 0.62, hero.pos.z);
   actorRoot.add(mesh);
   shots.push({ mesh, dir: { x: dx / len, y: dz / len }, life: 1.5, damage: 3.2 * hero.damage, pierce: hero.level >= 5 ? 1 : 0 });
+  heroAttackTime = 0.28;
 }
 
 function burstWard() {
@@ -264,12 +266,13 @@ function burstWard() {
   actorRoot.add(ward);
   particles.push({ mesh: ward, vel: new THREE.Vector3(0, 0, 0), life: 0.55 });
   for (const e of enemies) {
-    const d = e.mesh.position.distanceTo(hero.pos);
+    const d = e.rig.position.distanceTo(hero.pos);
     if (d < 4.2) {
       e.hp -= 9 * hero.damage;
-      const away = e.mesh.position.clone().sub(hero.pos).normalize().multiplyScalar(1.8);
-      e.mesh.position.add(away);
+      const away = e.rig.position.clone().sub(hero.pos).normalize().multiplyScalar(1.8);
+      e.rig.position.add(away);
       e.hitFlash = 0.12;
+      e.attackTime = 0.25;
     }
   }
 }
@@ -286,7 +289,7 @@ function damageEnemy(enemy: Enemy, amount: number) {
   enemy.hitFlash = 0.08;
   for (let i = 0; i < 2; i++) {
     const p = makeSprite(art.sprites.shot, 0.18, 0.18, 0.5);
-    p.position.copy(enemy.mesh.position);
+    p.position.copy(enemy.rig.position);
     actorRoot.add(p);
     particles.push({ mesh: p, vel: new THREE.Vector3((Math.random() - 0.5) * 3, 2.2, (Math.random() - 0.5) * 3), life: 0.3 });
   }
@@ -349,6 +352,7 @@ function update(dt: number) {
   const stage = stages[stageIndex];
   stageTime += dt;
   hero.cooldown -= dt;
+  heroAttackTime = Math.max(0, heroAttackTime - dt);
   hero.burstCooldown = Math.max(0, hero.burstCooldown - dt);
   hero.invuln = Math.max(0, hero.invuln - dt);
   spawnTimer -= dt;
@@ -358,14 +362,21 @@ function update(dt: number) {
     if (stageTime > stage.duration * 0.72) spawnEnemy();
   }
   const moveLen = Math.hypot(input.x, input.y);
+  heroMoving = moveLen > 0.05;
   if (moveLen > 0.05) {
     hero.pos.x += (input.x / moveLen) * hero.speed * dt;
     hero.pos.z += (input.y / moveLen) * hero.speed * dt;
   }
   hero.pos.x = THREE.MathUtils.clamp(hero.pos.x, -38, 38);
   hero.pos.z = THREE.MathUtils.clamp(hero.pos.z, -38, 38);
-  heroMesh.position.copy(hero.pos);
-  heroMesh.rotation.y += (input.x * 0.12 - heroMesh.rotation.y) * 0.16;
+  heroRig.setPosition(hero.pos);
+  heroRig.update(dt, {
+    moving: heroMoving,
+    attack: heroAttackTime > 0 ? 1 - heroAttackTime / 0.28 : 0,
+    hitFlash: hero.invuln,
+    facingX: input.x,
+    facingZ: input.y,
+  });
   aimRing.position.set(hero.pos.x, 0.04, hero.pos.z);
   aimRing.scale.setScalar(1 + Math.sin(performance.now() * 0.006) * 0.04);
   camera.position.set(hero.pos.x + 12, 14, hero.pos.z + 12);
@@ -393,22 +404,29 @@ function update(dt: number) {
 function updateEnemies(dt: number) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
-    const dx = hero.pos.x - e.mesh.position.x;
-    const dz = hero.pos.z - e.mesh.position.z;
+    const dx = hero.pos.x - e.rig.position.x;
+    const dz = hero.pos.z - e.rig.position.z;
     const len = Math.hypot(dx, dz) || 1;
     const weave = e.kind === 'wisp' ? Math.sin(stageTime * 5 + i) * 0.8 : 0;
-    e.mesh.position.x += ((dx / len) * e.speed + (dz / len) * weave) * dt;
-    e.mesh.position.z += ((dz / len) * e.speed - (dx / len) * weave) * dt;
-    e.mesh.rotation.y += dt * (e.kind === 'brute' ? 1.8 : 3.4);
+    e.rig.position.x += ((dx / len) * e.speed + (dz / len) * weave) * dt;
+    e.rig.position.z += ((dz / len) * e.speed - (dx / len) * weave) * dt;
     e.hitFlash = Math.max(0, e.hitFlash - dt);
-    (e.mesh.material as THREE.SpriteMaterial).color.setHex(e.hitFlash > 0 ? 0xffffff : stages[stageIndex].enemyTint);
+    e.attackTime = Math.max(0, e.attackTime - dt);
+    e.rig.update(dt, {
+      moving: true,
+      attack: e.attackTime > 0 ? 1 - e.attackTime / 0.35 : 0,
+      hitFlash: e.hitFlash,
+      facingX: dx,
+      facingZ: dz,
+    });
     if (len < 0.8 && hero.invuln <= 0) {
       hero.hp -= Math.max(2, e.touch - hero.armor);
       hero.invuln = 0.5;
+      e.attackTime = 0.35;
     }
     if (e.hp <= 0) {
-      dropGem(e.mesh.position, e.kind === 'brute' ? 3 : 1);
-      actorRoot.remove(e.mesh);
+      dropGem(e.rig.position, e.kind === 'brute' ? 3 : 1);
+      actorRoot.remove(e.rig.group);
       enemies.splice(i, 1);
     }
   }
@@ -422,7 +440,7 @@ function updateShots(dt: number) {
     s.mesh.position.z += s.dir.y * 13 * dt;
     s.mesh.scale.setScalar(1 + Math.sin(s.life * 30) * 0.14);
     for (const e of enemies) {
-      if (s.mesh.position.distanceToSquared(e.mesh.position) < 0.42) {
+      if (s.mesh.position.distanceToSquared(e.rig.position) < 0.42) {
         damageEnemy(e, s.damage);
         s.pierce -= 1;
         if (s.pierce < 0) s.life = 0;

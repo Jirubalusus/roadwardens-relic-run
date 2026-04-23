@@ -1,6 +1,6 @@
 # GPT Image 2 Asset Pipeline
 
-This folder defines the production art pass for Roadwardens: Relic Run. The runtime currently ships with deterministic canvas sprites so the game is playable without generated files, but these prompts are ready to generate transparent source sprites and drop them into `public/assets/sprites/`.
+This folder defines the production art pass for Roadwardens: Relic Run. The runtime is now prepared for GPT Image character art: `src/characters.ts` renders each hero/enemy as a layered billboard rig, loads the generated full-body atlas from `public/assets/sprites/gpt-character-atlas.png`, and animates separate arms/legs/weapon/glow layers for walk and attack motion.
 
 ## Run
 
@@ -28,8 +28,11 @@ npm run assets:gpt-image
 
 ## Naming
 
+- `gpt-character-atlas.png` for a quick 2x2 full-body atlas: top-left hero, top-right skulk, bottom-left brute, bottom-right wisp
 - `hero-mira-<state>.png`
+- `hero-mira/<part>.png` for layered rig imports: `body`, `head`, `arm-front`, `arm-back`, `leg-front`, `leg-back`, `weapon`, `glow`
 - `enemy-<archetype>.png`
+- `enemy-<archetype>/<part>.png` with the same layer names when possible
 - `pickup-<item>.png`
 - `prop-<biome-or-object>.png`
 - `backdrop-<stage>.webp`
@@ -42,7 +45,7 @@ Keep raw generated sources in `public/assets/sprites/` only when they are runtim
 - Keep silhouettes bold enough to read at `32px` for pickups, `48px` for enemies, and `64px` for the hero.
 - Preserve the in-game color roles: Mira uses blue cloak and gold lantern, XP is teal, health is red, ward magic is gold-teal, enemies are warm hostile silhouettes.
 - Avoid detailed facial rendering and thin ornament lines; they shimmer on mobile and add no gameplay clarity.
-- A future import can replace the canvas textures in `src/art.ts` with loaded atlas regions without touching gameplay logic.
+- A future import can replace the generated full-body atlas and procedural interim limb layers in `src/characters.ts` with final GPT Image part textures without touching gameplay logic.
 
 Official OpenAI image docs used for the script parameters:
 
